@@ -23,7 +23,7 @@ export function Header() {
       <div className="flex h-14 items-center px-6">
         <Link href="/" className="flex items-center gap-2 mr-8">
           <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
-            <span className="text-background font-bold text-sm">RA</span>
+            <span className="text-background font-bold text-sm">RM</span>
           </div>
           <span className="font-semibold hidden sm:inline-block">RMCS Auto Aim</span>
         </Link>
