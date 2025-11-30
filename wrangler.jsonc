@@ -1,6 +1,7 @@
 {
     "name": "rmcs_auto_aim_v2_website",
     "compatibility_date": "2025-11-30",
+    "main": "worker.ts",
     "assets": {
         "directory": "out"
     }

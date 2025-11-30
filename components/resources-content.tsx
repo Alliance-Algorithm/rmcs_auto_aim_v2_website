@@ -178,21 +178,15 @@ export function ResourcesContent({ assets }: { assets: Record<string, string> })
   const groups = useMemo(() => categorizeAssets(assets), [assets])
   const totalAssets = Object.keys(assets).length
 
-  const handleDownload = async (url: string, filename: string) => {
-    try {
-      const response = await fetch(url)
-      const blob = await response.blob()
-      const blobUrl = window.URL.createObjectURL(blob)
-      const link = document.createElement("a")
-      link.href = blobUrl
-      link.download = filename
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(blobUrl)
-    } catch (error) {
-      window.open(url, "_blank")
-    }
+  const handleDownload = (url: string, filename: string) => {
+    const params = new URLSearchParams({ url, filename })
+    const downloadUrl = `/api/resources/download?${params.toString()}`
+    const link = document.createElement("a")
+    link.href = downloadUrl
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
   }
 
   return (
