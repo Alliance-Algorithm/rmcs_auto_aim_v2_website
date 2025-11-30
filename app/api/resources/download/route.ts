@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+export const revalidate = 0
+
 function extractFilenameFromUrl(url: string) {
   try {
     const cleanedUrl = url.split("?")[0].split("#")[0]
