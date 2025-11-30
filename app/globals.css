@@ -117,6 +117,69 @@
   }
 }
 
+/* Markdown content styles - 确保颜色正确应用 */
+article {
+  color: var(--foreground);
+}
+
+article p {
+  color: var(--foreground);
+}
+
+/* 链接使用柔和的灰色调，稍微深一点以区分 */
+article a.markdown-link {
+  color: oklch(0.35 0 0) !important;
+  text-decoration-color: oklch(0.35 0 0);
+}
+
+.dark article a.markdown-link {
+  color: oklch(0.75 0 0) !important;
+  text-decoration-color: oklch(0.75 0 0);
+}
+
+article a.markdown-link:hover {
+  color: oklch(0.25 0 0) !important;
+}
+
+.dark article a.markdown-link:hover {
+  color: oklch(0.85 0 0) !important;
+}
+
+/* 代码使用柔和的灰色调 */
+article code.markdown-code {
+  color: oklch(0.35 0 0) !important;
+}
+
+.dark article code.markdown-code {
+  color: oklch(0.75 0 0) !important;
+}
+
+article strong {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+article em {
+  color: var(--foreground);
+  font-style: italic;
+}
+
+article li {
+  color: var(--foreground);
+}
+
+article td {
+  color: var(--foreground);
+}
+
+article h1, article h2, article h3, article h4, article h5 {
+  color: var(--foreground);
+}
+
+article h6 {
+  color: var(--muted-foreground);
+}
+
 /* Custom scrollbar for webkit browsers */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
@@ -135,64 +198,3 @@
   background: var(--muted-foreground);
 }
 
-/* Markdown styles */
-.prose-custom h1 {
-  @apply text-3xl font-bold mb-6 mt-8 first:mt-0;
-}
-
-.prose-custom h2 {
-  @apply text-2xl font-semibold mb-4 mt-6;
-}
-
-.prose-custom h3 {
-  @apply text-xl font-medium mb-3 mt-4;
-}
-
-.prose-custom p {
-  @apply mb-4 leading-relaxed;
-}
-
-.prose-custom code {
-  @apply bg-muted px-1.5 py-0.5 rounded text-sm font-mono;
-}
-
-.prose-custom pre {
-  @apply bg-muted p-4 rounded-lg overflow-x-auto mb-4;
-}
-
-.prose-custom pre code {
-  @apply bg-transparent p-0;
-}
-
-.prose-custom ul {
-  @apply list-disc pl-6 mb-4;
-}
-
-.prose-custom ol {
-  @apply list-decimal pl-6 mb-4;
-}
-
-.prose-custom li {
-  @apply mb-1;
-}
-
-.prose-custom blockquote {
-  @apply border-l-4 border-border pl-4 italic my-4;
-}
-
-.prose-custom a {
-  @apply underline underline-offset-2 hover:text-muted-foreground transition-colors;
-}
-
-.prose-custom table {
-  @apply w-full border-collapse mb-4;
-}
-
-.prose-custom th,
-.prose-custom td {
-  @apply border border-border px-3 py-2 text-left;
-}
-
-.prose-custom th {
-  @apply bg-muted font-medium;
-}

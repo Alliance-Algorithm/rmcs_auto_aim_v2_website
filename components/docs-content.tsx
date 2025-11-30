@@ -1,10 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronRight, FileText, Folder, ChevronDown } from "lucide-react"
+import { ChevronRight, FileText, Folder, ChevronDown, Menu } from "lucide-react"
 import { fetchDocFiles, fetchFileContent } from "@/lib/github"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
 import { cn } from "@/lib/utils"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
 
 interface DocFile {
   name: string
@@ -111,6 +113,8 @@ export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
   const [content, setContent] = useState<string>("")
   const [toc, setToc] = useState<TOCItem[]>([])
   const [loading, setLoading] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   // Auto-select first markdown file
   useEffect(() => {
@@ -153,6 +157,8 @@ export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
     setContent(fileContent)
     setToc(extractTOC(fileContent))
     setLoading(false)
+    // 在手机端选择文件后关闭抽屉
+    setSidebarOpen(false)
   }
 
   const scrollToHeading = (id: string) => {
@@ -162,31 +168,68 @@ export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
     }
   }
 
+  const SidebarContent = () => (
+    <>
+      <div className="p-4 border-b border-border flex items-center justify-between">
+        <h2 className="font-semibold text-sm">Documentation</h2>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="hidden lg:flex"
+        >
+          {sidebarCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4 rotate-[-90deg]" />}
+        </Button>
+      </div>
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
+        {tree.length === 0 ? (
+          <div className="p-4 text-sm text-muted-foreground">No documentation files found</div>
+        ) : (
+          <FileTree nodes={tree} onSelect={handleSelect} selected={selectedPath} onToggle={handleToggle} />
+        )}
+      </div>
+    </>
+  )
+
   return (
-    <div className="flex h-[calc(100vh-56px)]">
-      {/* Left Sidebar - File Tree */}
-      <aside className="w-64 border-r border-border flex flex-col shrink-0">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-sm">Documentation</h2>
-        </div>
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-          {tree.length === 0 ? (
-            <div className="p-4 text-sm text-muted-foreground">No documentation files found</div>
-          ) : (
-            <FileTree nodes={tree} onSelect={handleSelect} selected={selectedPath} onToggle={handleToggle} />
-          )}
-        </div>
+    <div className="flex h-[calc(100vh-56px)] relative">
+      {/* Mobile: Sheet Drawer */}
+      <div className="lg:hidden">
+        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <div className="absolute top-4 left-4 z-10">
+            <SheetTrigger asChild>
+              <Button variant="outline" size="icon">
+                <Menu className="w-4 h-4" />
+              </Button>
+            </SheetTrigger>
+          </div>
+          <SheetContent side="left" className="w-[280px] p-0">
+            <div className="flex flex-col h-full">
+              <SidebarContent />
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+
+      {/* Desktop: Collapsible Sidebar */}
+      <aside
+        className={cn(
+          "border-r border-border flex flex-col shrink-0 transition-all duration-300 hidden lg:flex",
+          sidebarCollapsed ? "w-0 overflow-hidden" : "w-64"
+        )}
+      >
+        <SidebarContent />
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto custom-scrollbar">
-        <div className="max-w-4xl mx-auto px-8 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 lg:pt-8 pt-16">
           {loading ? (
             <div className="flex items-center justify-center h-64">
               <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
             </div>
           ) : content ? (
-            <MarkdownRenderer content={content} />
+            <MarkdownRenderer content={content} currentPath={selectedPath} />
           ) : (
             <div className="text-muted-foreground text-center py-20">
               <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />

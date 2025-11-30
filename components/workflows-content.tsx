@@ -82,22 +82,22 @@ export function WorkflowsContent({ initialRuns }: { initialRuns: WorkflowRun[] }
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
-        <div className="p-4 border border-border rounded-xl">
-          <div className="text-2xl font-bold">{stats.total}</div>
-          <div className="text-sm text-muted-foreground">Total Runs</div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
+        <div className="p-3 sm:p-4 border border-border rounded-xl">
+          <div className="text-xl sm:text-2xl font-bold">{stats.total}</div>
+          <div className="text-xs sm:text-sm text-muted-foreground truncate">Total Runs</div>
         </div>
-        <div className="p-4 border border-border rounded-xl">
-          <div className="text-2xl font-bold text-success">{stats.success}</div>
-          <div className="text-sm text-muted-foreground">Successful</div>
+        <div className="p-3 sm:p-4 border border-border rounded-xl">
+          <div className="text-xl sm:text-2xl font-bold text-success">{stats.success}</div>
+          <div className="text-xs sm:text-sm text-muted-foreground truncate">Successful</div>
         </div>
-        <div className="p-4 border border-border rounded-xl">
-          <div className="text-2xl font-bold text-destructive">{stats.failed}</div>
-          <div className="text-sm text-muted-foreground">Failed</div>
+        <div className="p-3 sm:p-4 border border-border rounded-xl">
+          <div className="text-xl sm:text-2xl font-bold text-destructive">{stats.failed}</div>
+          <div className="text-xs sm:text-sm text-muted-foreground truncate">Failed</div>
         </div>
-        <div className="p-4 border border-border rounded-xl">
-          <div className="text-2xl font-bold">{stats.pending}</div>
-          <div className="text-sm text-muted-foreground">In Progress</div>
+        <div className="p-3 sm:p-4 border border-border rounded-xl">
+          <div className="text-xl sm:text-2xl font-bold">{stats.pending}</div>
+          <div className="text-xs sm:text-sm text-muted-foreground truncate">In Progress</div>
         </div>
       </div>
 
@@ -131,11 +131,12 @@ export function WorkflowsContent({ initialRuns }: { initialRuns: WorkflowRun[] }
                       </div>
                       <span
                         className={cn(
-                          "text-xs px-2 py-1 rounded-full font-medium",
+                          "text-xs px-2 py-1 rounded-full font-medium shrink-0 truncate max-w-[80px] sm:max-w-none",
                           run.conclusion === "success" && "bg-success/10 text-success",
                           run.conclusion === "failure" && "bg-destructive/10 text-destructive",
                           !run.conclusion && "bg-muted text-muted-foreground",
                         )}
+                        title={getStatusText(run.status, run.conclusion)}
                       >
                         {getStatusText(run.status, run.conclusion)}
                       </span>
@@ -149,20 +150,20 @@ export function WorkflowsContent({ initialRuns }: { initialRuns: WorkflowRun[] }
 
                     {expandedRun === run.id && (
                       <div className="border-t border-border p-4 bg-muted/30">
-                        <div className="grid grid-cols-2 gap-4 text-sm mb-4">
-                          <div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm mb-4">
+                          <div className="break-words">
                             <span className="text-muted-foreground">Created:</span>
-                            <span className="ml-2">{formatDate(run.created_at)}</span>
+                            <span className="ml-2 break-words">{formatDate(run.created_at)}</span>
                           </div>
-                          <div>
+                          <div className="break-words">
                             <span className="text-muted-foreground">Updated:</span>
-                            <span className="ml-2">{formatDate(run.updated_at)}</span>
+                            <span className="ml-2 break-words">{formatDate(run.updated_at)}</span>
                           </div>
-                          <div>
+                          <div className="break-words">
                             <span className="text-muted-foreground">Branch:</span>
-                            <span className="ml-2 font-mono">{run.head_branch}</span>
+                            <span className="ml-2 font-mono break-all">{run.head_branch}</span>
                           </div>
-                          <div>
+                          <div className="break-words">
                             <span className="text-muted-foreground">Commit:</span>
                             <span className="ml-2 font-mono">{run.head_sha.slice(0, 7)}</span>
                           </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { Download, ImageIcon, Video, File, Music, FileCode } from "lucide-react"
+import { Download, ImageIcon, Video, File, Music, FileCode, FileText, Archive, Container } from "lucide-react"
 
 interface ResourceGroup {
   label: string
@@ -15,30 +15,141 @@ function getExtension(filename: string): string {
   return parts.length > 1 ? parts.pop()?.toLowerCase() || "" : ""
 }
 
+function getFilenameFromUrl(url: string): string {
+  try {
+    // 移除查询参数和锚点
+    const urlWithoutQuery = url.split("?")[0].split("#")[0]
+    // 获取路径的最后一部分
+    const pathParts = urlWithoutQuery.split("/")
+    return pathParts[pathParts.length - 1] || ""
+  } catch {
+    return ""
+  }
+}
+
+function getFileType(filename: string, url: string): { icon: typeof File; category: string } {
+  const lowerName = filename.toLowerCase()
+  
+  // 从 URL 中提取文件名和扩展名
+  const urlFilename = getFilenameFromUrl(url)
+  const urlExt = getExtension(urlFilename)
+  const urlLowerName = urlFilename.toLowerCase()
+  
+  // 优先使用 URL 中的扩展名，如果没有则使用文件名中的扩展名
+  const ext = urlExt || getExtension(filename)
+  
+  // 推理模型（以 model.zip 结尾）
+  if (
+    lowerName.endsWith("model.zip") || 
+    urlLowerName.endsWith("model.zip") ||
+    (ext === "zip" && (lowerName.includes("model") || urlLowerName.includes("model")))
+  ) {
+    return { icon: Archive, category: "models" }
+  }
+  
+  // 图片
+  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"].includes(ext)) {
+    return { icon: ImageIcon, category: "images" }
+  }
+  
+  // 视频
+  if (["mp4", "avi", "mov", "mkv", "webm", "flv", "wmv"].includes(ext)) {
+    return { icon: Video, category: "videos" }
+  }
+  
+  // 音频
+  if (["mp3", "wav", "ogg", "flac", "aac", "m4a"].includes(ext)) {
+    return { icon: Music, category: "audio" }
+  }
+  
+  // yml/yaml
+  if (["yml", "yaml"].includes(ext)) {
+    return { icon: FileCode, category: "code" }
+  }
+  
+  // json
+  if (ext === "json") {
+    return { icon: FileCode, category: "code" }
+  }
+  
+  // .clangd-format
+  if (
+    lowerName === ".clangd-format" || 
+    lowerName.endsWith(".clangd-format") ||
+    urlLowerName === ".clangd-format" || 
+    urlLowerName.endsWith(".clangd-format")
+  ) {
+    return { icon: FileCode, category: "code" }
+  }
+  
+  // txt
+  if (ext === "txt") {
+    return { icon: FileText, category: "code" }
+  }
+  
+  // Dockerfile
+  if (
+    lowerName === "dockerfile" || 
+    lowerName.startsWith("dockerfile.") ||
+    urlLowerName === "dockerfile" || 
+    urlLowerName.startsWith("dockerfile.")
+  ) {
+    return { icon: Container, category: "code" }
+  }
+  
+  // zip/archive
+  if (ext === "zip" || ext === "tar" || ext === "gz" || ext === "rar" || ext === "7z") {
+    return { icon: Archive, category: "archives" }
+  }
+  
+  // 其他代码文件
+  if (["xml", "csv", "md", "js", "ts", "py", "java", "cpp", "c", "h", "hpp"].includes(ext)) {
+    return { icon: FileCode, category: "code" }
+  }
+  
+  return { icon: File, category: "other" }
+}
+
+function getFileIcon(filename: string, url: string) {
+  return getFileType(filename, url).icon
+}
+
 function categorizeAssets(assets: Record<string, string>): ResourceGroup[] {
   const categories: Record<string, ResourceGroup> = {
     images: {
       label: "Images",
       icon: ImageIcon,
-      extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"],
+      extensions: [],
       items: [],
     },
     videos: {
       label: "Videos",
       icon: Video,
-      extensions: ["mp4", "avi", "mov", "mkv", "webm", "flv", "wmv"],
+      extensions: [],
       items: [],
     },
     audio: {
       label: "Audio",
       icon: Music,
-      extensions: ["mp3", "wav", "ogg", "flac", "aac", "m4a"],
+      extensions: [],
+      items: [],
+    },
+    models: {
+      label: "Models",
+      icon: Archive,
+      extensions: [],
+      items: [],
+    },
+    archives: {
+      label: "Archives",
+      icon: Archive,
+      extensions: [],
       items: [],
     },
     code: {
       label: "Code & Data",
       icon: FileCode,
-      extensions: ["json", "yaml", "yml", "xml", "csv", "txt", "md"],
+      extensions: [],
       items: [],
     },
     other: {
@@ -51,18 +162,11 @@ function categorizeAssets(assets: Record<string, string>): ResourceGroup[] {
 
   for (const [name, url] of Object.entries(assets)) {
     const ext = getExtension(name)
-    let categorized = false
-
-    for (const [key, category] of Object.entries(categories)) {
-      if (key === "other") continue
-      if (category.extensions.includes(ext)) {
-        category.items.push({ name, url, ext })
-        categorized = true
-        break
-      }
-    }
-
-    if (!categorized) {
+    const { category } = getFileType(name, url)
+    
+    if (categories[category]) {
+      categories[category].items.push({ name, url, ext })
+    } else {
       categories.other.items.push({ name, url, ext })
     }
   }
@@ -135,27 +239,29 @@ export function ResourcesContent({ assets }: { assets: Record<string, string> })
                   <span className="text-sm font-normal text-muted-foreground">({group.items.length})</span>
                 </h2>
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {group.items.map((item) => (
-                    <div
-                      key={item.name}
-                      className="flex items-center gap-3 p-4 border border-border rounded-xl group hover:bg-accent/30 transition-colors"
-                    >
-                      <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                        <span className="text-xs font-mono uppercase text-muted-foreground">{item.ext || "?"}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate text-sm">{item.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{item.url}</p>
-                      </div>
-                      <button
+                  {group.items.map((item) => {
+                    const Icon = getFileIcon(item.name, item.url)
+                    return (
+                      <div
+                        key={item.name}
                         onClick={() => handleDownload(item.url, item.name)}
-                        className="p-2 rounded-lg hover:bg-accent opacity-0 group-hover:opacity-100 transition-all"
-                        aria-label={`Download ${item.name}`}
+                        className="flex items-center gap-3 p-4 border border-border rounded-xl group hover:bg-accent/30 transition-colors cursor-pointer"
                       >
-                        <Download className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                          <Icon className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate text-sm">{item.name}</p>
+                          <p className="text-xs text-muted-foreground break-all" title={item.url}>
+                            {item.url}
+                          </p>
+                        </div>
+                        <div className="p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-all pointer-events-none">
+                          <Download className="w-4 h-4" />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             )
