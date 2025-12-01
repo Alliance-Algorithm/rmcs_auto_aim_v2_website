@@ -29,84 +29,84 @@ function getFilenameFromUrl(url: string): string {
 
 function getFileType(filename: string, url: string): { icon: typeof File; category: string } {
   const lowerName = filename.toLowerCase()
-  
+
   // 从 URL 中提取文件名和扩展名
   const urlFilename = getFilenameFromUrl(url)
   const urlExt = getExtension(urlFilename)
   const urlLowerName = urlFilename.toLowerCase()
-  
+
   // 优先使用 URL 中的扩展名，如果没有则使用文件名中的扩展名
   const ext = urlExt || getExtension(filename)
-  
+
   // 推理模型（以 model.zip 结尾）
   if (
-    lowerName.endsWith("model.zip") || 
+    lowerName.endsWith("model.zip") ||
     urlLowerName.endsWith("model.zip") ||
     (ext === "zip" && (lowerName.includes("model") || urlLowerName.includes("model")))
   ) {
     return { icon: Archive, category: "models" }
   }
-  
+
   // 图片
   if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"].includes(ext)) {
     return { icon: ImageIcon, category: "images" }
   }
-  
+
   // 视频
   if (["mp4", "avi", "mov", "mkv", "webm", "flv", "wmv"].includes(ext)) {
     return { icon: Video, category: "videos" }
   }
-  
+
   // 音频
   if (["mp3", "wav", "ogg", "flac", "aac", "m4a"].includes(ext)) {
     return { icon: Music, category: "audio" }
   }
-  
+
   // yml/yaml
   if (["yml", "yaml"].includes(ext)) {
     return { icon: FileCode, category: "code" }
   }
-  
+
   // json
   if (ext === "json") {
     return { icon: FileCode, category: "code" }
   }
-  
+
   // .clangd-format
   if (
-    lowerName === ".clangd-format" || 
+    lowerName === ".clangd-format" ||
     lowerName.endsWith(".clangd-format") ||
-    urlLowerName === ".clangd-format" || 
+    urlLowerName === ".clangd-format" ||
     urlLowerName.endsWith(".clangd-format")
   ) {
     return { icon: FileCode, category: "code" }
   }
-  
+
   // txt
   if (ext === "txt") {
     return { icon: FileText, category: "code" }
   }
-  
+
   // Dockerfile
   if (
-    lowerName === "dockerfile" || 
+    lowerName === "dockerfile" ||
     lowerName.startsWith("dockerfile.") ||
-    urlLowerName === "dockerfile" || 
+    urlLowerName === "dockerfile" ||
     urlLowerName.startsWith("dockerfile.")
   ) {
     return { icon: Container, category: "code" }
   }
-  
+
   // zip/archive
   if (ext === "zip" || ext === "tar" || ext === "gz" || ext === "rar" || ext === "7z") {
     return { icon: Archive, category: "archives" }
   }
-  
+
   // 其他代码文件
   if (["xml", "csv", "md", "js", "ts", "py", "java", "cpp", "c", "h", "hpp"].includes(ext)) {
     return { icon: FileCode, category: "code" }
   }
-  
+
   return { icon: File, category: "other" }
 }
 
@@ -163,7 +163,7 @@ function categorizeAssets(assets: Record<string, string>): ResourceGroup[] {
   for (const [name, url] of Object.entries(assets)) {
     const ext = getExtension(name)
     const { category } = getFileType(name, url)
-    
+
     if (categories[category]) {
       categories[category].items.push({ name, url, ext })
     } else {
@@ -179,11 +179,11 @@ export function ResourcesContent({ assets }: { assets: Record<string, string> })
   const totalAssets = Object.keys(assets).length
 
   const handleDownload = (url: string, filename: string) => {
-    const params = new URLSearchParams({ url, filename })
-    const downloadUrl = `/api/resources/download?${params.toString()}`
+    // 直接使用浏览器下载接口，不通过 next 路由
     const link = document.createElement("a")
-    link.href = downloadUrl
+    link.href = url
     link.download = filename
+    link.target = "_blank"
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

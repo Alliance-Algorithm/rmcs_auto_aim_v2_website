@@ -112,6 +112,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -172,7 +173,11 @@ article td {
   color: var(--foreground);
 }
 
-article h1, article h2, article h3, article h4, article h5 {
+article h1,
+article h2,
+article h3,
+article h4,
+article h5 {
   color: var(--foreground);
 }
 
@@ -198,3 +203,27 @@ article h6 {
   background: var(--muted-foreground);
 }
 
+/* Highlight.js styles - 亮色模式使用 github，暗色模式使用 github-dark */
+:root {
+  --hljs-bg: #ffffff;
+}
+
+.dark {
+  --hljs-bg: #0d1117;
+}
+
+/* 覆盖 highlight.js 样式以支持主题切换 */
+.hljs {
+  background: var(--hljs-bg) !important;
+}
+
+/* 在暗色模式下使用 github-dark 样式 */
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .hljs {
+    background: #0d1117 !important;
+  }
+}
+
+.dark .hljs {
+  background: #0d1117 !important;
+}

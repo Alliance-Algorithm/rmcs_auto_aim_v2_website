@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { ChevronRight, FileText, Folder, ChevronDown, Menu } from "lucide-react"
 import { fetchDocFiles, fetchFileContent } from "@/lib/github"
 import { MarkdownRenderer } from "@/components/markdown-renderer"
@@ -116,13 +116,34 @@ export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
-  // Auto-select first markdown file
+  const handleSelect = useCallback(async (path: string) => {
+    if (!path.endsWith(".md")) return
+    setSelectedPath(path)
+    setLoading(true)
+    const fileContent = await fetchFileContent(path)
+    setContent(fileContent)
+    setToc(extractTOC(fileContent))
+    setLoading(false)
+    // 在手机端选择文件后关闭抽屉
+    setSidebarOpen(false)
+  }, [])
+
+  // Auto-select README.md as default, otherwise first markdown file
   useEffect(() => {
-    const firstMd = initialFiles.find((f) => f.name.endsWith(".md"))
-    if (firstMd) {
-      handleSelect(firstMd.path)
+    // 优先选择 README.md（根目录或 doc 目录下的）
+    const readme = initialFiles.find((f) =>
+      f.name.toLowerCase() === "readme.md" && f.type === "file"
+    )
+    if (readme) {
+      handleSelect(readme.path)
+    } else {
+      // 如果没有 README，选择第一个 markdown 文件
+      const firstMd = initialFiles.find((f) => f.name.endsWith(".md") && f.type === "file")
+      if (firstMd) {
+        handleSelect(firstMd.path)
+      }
     }
-  }, [initialFiles])
+  }, [initialFiles, handleSelect])
 
   const handleToggle = async (path: string) => {
     const updateTree = async (nodes: TreeNode[]): Promise<TreeNode[]> => {
@@ -147,18 +168,6 @@ export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
       )
     }
     setTree(await updateTree(tree))
-  }
-
-  const handleSelect = async (path: string) => {
-    if (!path.endsWith(".md")) return
-    setSelectedPath(path)
-    setLoading(true)
-    const fileContent = await fetchFileContent(path)
-    setContent(fileContent)
-    setToc(extractTOC(fileContent))
-    setLoading(false)
-    // 在手机端选择文件后关闭抽屉
-    setSidebarOpen(false)
   }
 
   const scrollToHeading = (id: string) => {
