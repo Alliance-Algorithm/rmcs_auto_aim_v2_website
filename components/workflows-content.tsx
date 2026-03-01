@@ -1,8 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { CheckCircle, XCircle, Clock, ChevronDown, ExternalLink, GitBranch } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { fetchWorkflowRuns } from "@/lib/github"
+
+let workflowsCache: WorkflowRun[] | null = null
 
 interface WorkflowRun {
   id: number
@@ -63,14 +66,28 @@ function groupByDate(runs: WorkflowRun[]): Record<string, WorkflowRun[]> {
 }
 
 export function WorkflowsContent({ initialRuns }: { initialRuns: WorkflowRun[] }) {
+  const [runs, setRuns] = useState<WorkflowRun[]>(workflowsCache ?? initialRuns)
+  const [loading, setLoading] = useState<boolean>(!workflowsCache && (initialRuns.length === 0))
   const [expandedRun, setExpandedRun] = useState<number | null>(null)
-  const grouped = groupByDate(initialRuns)
+  const grouped = groupByDate(runs)
+
+  useEffect(() => {
+    if (workflowsCache) return
+
+    setLoading(true)
+    fetchWorkflowRuns()
+      .then((nextRuns) => {
+        workflowsCache = nextRuns
+        setRuns(nextRuns)
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   const stats = {
-    total: initialRuns.length,
-    success: initialRuns.filter((r) => r.conclusion === "success").length,
-    failed: initialRuns.filter((r) => r.conclusion === "failure").length,
-    pending: initialRuns.filter((r) => r.status !== "completed").length,
+    total: runs.length,
+    success: runs.filter((r) => r.conclusion === "success").length,
+    failed: runs.filter((r) => r.conclusion === "failure").length,
+    pending: runs.filter((r) => r.status !== "completed").length,
   }
 
   return (
@@ -102,7 +119,12 @@ export function WorkflowsContent({ initialRuns }: { initialRuns: WorkflowRun[] }
       </div>
 
       {/* Workflow List */}
-      {initialRuns.length === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin mr-3" />
+          <span>Loading workflow runs...</span>
+        </div>
+      ) : runs.length === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <GitBranch className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>No workflow runs found</p>

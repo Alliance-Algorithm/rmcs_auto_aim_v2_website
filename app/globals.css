@@ -203,27 +203,79 @@ article h6 {
   background: var(--muted-foreground);
 }
 
-/* Highlight.js styles - 亮色模式使用 github，暗色模式使用 github-dark */
+/* Highlight.js code block background */
 :root {
-  --hljs-bg: #ffffff;
+  --code-block-bg: #f6f8fa;
 }
 
 .dark {
-  --hljs-bg: #0d1117;
+  --code-block-bg: #161b22;
 }
 
-/* 覆盖 highlight.js 样式以支持主题切换 */
 .hljs {
-  background: var(--hljs-bg) !important;
-}
-
-/* 在暗色模式下使用 github-dark 样式 */
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) .hljs {
-    background: #0d1117 !important;
-  }
+  background: transparent !important;
 }
 
 .dark .hljs {
-  background: #0d1117 !important;
+  color: #c9d1d9;
+}
+
+.dark .hljs-comment,
+.dark .hljs-quote {
+  color: #8b949e;
+}
+
+.dark .hljs-keyword,
+.dark .hljs-selector-tag,
+.dark .hljs-literal,
+.dark .hljs-section,
+.dark .hljs-link,
+.dark .hljs-title,
+.dark .hljs-name,
+.dark .hljs-strong {
+  color: #ff7b72;
+}
+
+.dark .hljs-meta,
+.dark .hljs-meta-keyword,
+.dark .hljs-meta-string {
+  color: #ffa657 !important;
+}
+
+.dark .hljs-meta .hljs-keyword {
+  color: #ff7b72 !important;
+}
+
+.dark .hljs-meta .hljs-string {
+  color: #a5d6ff !important;
+}
+
+.dark .hljs-string,
+.dark .hljs-title.class_,
+.dark .hljs-title.class_.inherited__,
+.dark .hljs-symbol,
+.dark .hljs-bullet,
+.dark .hljs-addition,
+.dark .hljs-code {
+  color: #a5d6ff;
+}
+
+.dark .hljs-number,
+.dark .hljs-built_in,
+.dark .hljs-type,
+.dark .hljs-attr,
+.dark .hljs-variable,
+.dark .hljs-template-variable {
+  color: #79c0ff;
+}
+
+.dark .hljs-regexp,
+.dark .hljs-link,
+.dark .hljs-selector-attr,
+.dark .hljs-selector-pseudo {
+  color: #d2a8ff;
+}
+
+.dark .hljs-emphasis {
+  font-style: italic;
 }

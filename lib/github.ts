@@ -2,6 +2,57 @@ const REPO_OWNER = "Alliance-Algorithm"
 const REPO_NAME = "rmcs_auto_aim_v2"
 const BASE_URL = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}`
 
+function getGitHubHeaders() {
+  const token = typeof process !== "undefined" ? process.env.GITHUB_TOKEN : undefined
+  return {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "rmcs-auto-aim-web",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
+
+async function fetchViaJina<T>(url: string): Promise<T | null> {
+  try {
+    const mirroredUrl = `https://r.jina.ai/http://${url.replace(/^https?:\/\//, "")}`
+    const res = await fetch(mirroredUrl, { cache: "no-store" })
+    if (!res.ok) return null
+
+    const raw = await res.text()
+    const objectStart = raw.indexOf("{")
+    const arrayStart = raw.indexOf("[")
+    const jsonStart =
+      objectStart === -1 ? arrayStart : arrayStart === -1 ? objectStart : Math.min(objectStart, arrayStart)
+
+    if (jsonStart === -1) return null
+    return JSON.parse(raw.slice(jsonStart)) as T
+  } catch {
+    return null
+  }
+}
+
+async function fetchGitHubJson<T>(path: string): Promise<T | null> {
+  const url = `${BASE_URL}${path}`
+
+  try {
+    const res = await fetch(url, {
+      headers: getGitHubHeaders(),
+      cache: "no-store",
+    })
+
+    if (res.ok) {
+      return (await res.json()) as T
+    }
+
+    if (res.status === 403) {
+      return await fetchViaJina<T>(url)
+    }
+
+    return null
+  } catch {
+    return await fetchViaJina<T>(url)
+  }
+}
+
 interface GitHubFile {
   name: string
   path: string
@@ -43,22 +94,15 @@ interface Contributor {
 }
 
 export async function fetchDocFiles(path = "doc"): Promise<GitHubFile[]> {
-  try {
-    const res = await fetch(`${BASE_URL}/contents/${path}`, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-      next: { revalidate: 300 },
-    })
-    if (!res.ok) return []
-    return res.json()
-  } catch {
-    return []
-  }
+  const safePath = path ? `/${path}` : ""
+  const files = await fetchGitHubJson<GitHubFile[]>(`/contents${safePath}`)
+  return files || []
 }
 
 export async function fetchFileContent(path: string): Promise<string> {
   try {
     const res = await fetch(`https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${path}`, {
-      next: { revalidate: 300 },
+      cache: "no-store",
     })
     if (!res.ok) return ""
     return res.text()
@@ -68,57 +112,24 @@ export async function fetchFileContent(path: string): Promise<string> {
 }
 
 export async function fetchWorkflowRuns(): Promise<WorkflowRun[]> {
-  try {
-    const res = await fetch(`${BASE_URL}/actions/runs?per_page=30`, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-      next: { revalidate: 60 },
-    })
-    if (!res.ok) return []
-    const data = await res.json()
-    return data.workflow_runs || []
-  } catch {
-    return []
-  }
+  const data = await fetchGitHubJson<{ workflow_runs?: WorkflowRun[] }>("/actions/runs?per_page=30")
+  return data?.workflow_runs || []
 }
 
 export async function fetchWorkflowLogs(runId: number): Promise<string> {
-  try {
-    const res = await fetch(`${BASE_URL}/actions/runs/${runId}/jobs`, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-      next: { revalidate: 60 },
-    })
-    if (!res.ok) return "Failed to fetch logs"
-    const data = await res.json()
-    return JSON.stringify(data.jobs, null, 2)
-  } catch {
-    return "Failed to fetch logs"
-  }
+  const data = await fetchGitHubJson<{ jobs?: unknown[] }>(`/actions/runs/${runId}/jobs`)
+  if (!data) return "Failed to fetch logs"
+  return JSON.stringify(data.jobs || [], null, 2)
 }
 
 export async function fetchCommits(page = 1): Promise<GitHubCommit[]> {
-  try {
-    const res = await fetch(`${BASE_URL}/commits?per_page=100&page=${page}`, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-      next: { revalidate: 300 },
-    })
-    if (!res.ok) return []
-    return res.json()
-  } catch {
-    return []
-  }
+  const commits = await fetchGitHubJson<GitHubCommit[]>(`/commits?per_page=100&page=${page}`)
+  return commits || []
 }
 
 export async function fetchContributors(): Promise<Contributor[]> {
-  try {
-    const res = await fetch(`${BASE_URL}/contributors`, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-      next: { revalidate: 300 },
-    })
-    if (!res.ok) return []
-    return res.json()
-  } catch {
-    return []
-  }
+  const contributors = await fetchGitHubJson<Contributor[]>("/contributors")
+  return contributors || []
 }
 
 export async function fetchAssets(): Promise<Record<string, string>> {
@@ -131,7 +142,9 @@ export async function fetchAssets(): Promise<Record<string, string>> {
     for (const line of lines) {
       const match = line.match(/^\s*([^:]+):\s*(.+)\s*$/)
       if (match) {
-        assets[match[1].trim()] = match[2].trim()
+        const rawUrl = match[2].trim()
+        const cleanUrl = rawUrl.replace(/^['"]+|['"]+$/g, "")
+        assets[match[1].trim()] = cleanUrl
       }
     }
     return assets
@@ -141,14 +154,5 @@ export async function fetchAssets(): Promise<Record<string, string>> {
 }
 
 export async function fetchRepoInfo() {
-  try {
-    const res = await fetch(BASE_URL, {
-      headers: { Accept: "application/vnd.github.v3+json" },
-      next: { revalidate: 300 },
-    })
-    if (!res.ok) return null
-    return res.json()
-  } catch {
-    return null
-  }
+  return fetchGitHubJson("")
 }

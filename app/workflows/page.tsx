@@ -1,14 +1,10 @@
 import { Header } from "@/components/header"
 import { WorkflowsContent } from "@/components/workflows-content"
-import { fetchWorkflowRuns } from "@/lib/github"
-
-export default async function WorkflowsPage() {
-  const runs = await fetchWorkflowRuns()
-
+export default function WorkflowsPage() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <WorkflowsContent initialRuns={runs} />
+      <WorkflowsContent initialRuns={[]} />
     </div>
   )
 }

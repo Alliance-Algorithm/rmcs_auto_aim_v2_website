@@ -1,8 +1,12 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { GitCommit, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { fetchCommits, fetchContributors } from "@/lib/github"
+
+let commitsCache: Commit[] | null = null
+let contributorsCache: Contributor[] | null = null
 
 interface Commit {
   sha: string
@@ -104,13 +108,46 @@ export function ContributorsContent({
   initialCommits: Commit[]
   contributors: Contributor[]
 }) {
-  const calendarData = useMemo(() => generateCalendarData(initialCommits), [initialCommits])
+  const [commits, setCommits] = useState<Commit[]>(commitsCache ?? initialCommits)
+  const [contributorList, setContributorList] = useState<Contributor[]>(contributorsCache ?? contributors)
+  const [loading, setLoading] = useState<boolean>(!commitsCache && !contributorsCache && (initialCommits.length === 0))
+
+  useEffect(() => {
+    if (commitsCache && contributorsCache) return
+
+    setLoading(true)
+    Promise.all([fetchCommits(), fetchContributors()])
+      .then(([nextCommits, nextContributors]) => {
+        commitsCache = nextCommits
+        contributorsCache = nextContributors
+        setCommits(nextCommits)
+        setContributorList(nextContributors)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const calendarData = useMemo(() => generateCalendarData(commits), [commits])
   const weeks = useMemo(() => groupByWeek(calendarData), [calendarData])
   const maxCommits = useMemo(() => Math.max(...calendarData.map((d) => d.count), 1), [calendarData])
   const totalCommits = useMemo(() => calendarData.reduce((sum, d) => sum + d.count, 0), [calendarData])
 
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
   const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
+  if (loading) {
+    return (
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Contributors</h1>
+          <p className="text-muted-foreground">Development activity and commit history</p>
+        </div>
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin mr-3" />
+          <span>Loading contributors...</span>
+        </div>
+      </main>
+    )
+  }
 
   return (
     <main className="max-w-6xl mx-auto px-6 py-8">
@@ -124,7 +161,7 @@ export function ContributorsContent({
       <div className="mb-12">
         <h2 className="text-lg font-semibold mb-4">Team Members</h2>
         <div className="flex flex-wrap gap-4">
-          {contributors.map((contributor) => (
+          {contributorList.map((contributor) => (
             <a
               key={contributor.login}
               href={`https://github.com/${contributor.login}`}
@@ -224,7 +261,7 @@ export function ContributorsContent({
       <div>
         <h2 className="text-lg font-semibold mb-4">Recent Commits</h2>
         <div className="space-y-2">
-          {initialCommits.slice(0, 20).map((commit) => (
+          {commits.slice(0, 20).map((commit) => (
             <div
               key={commit.sha}
               className="flex items-start gap-4 p-4 border border-border rounded-xl hover:bg-accent/30 transition-colors"

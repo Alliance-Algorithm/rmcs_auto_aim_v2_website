@@ -26,6 +26,13 @@ interface TOCItem {
   level: number
 }
 
+let docsTreeCache: TreeNode[] | null = null
+let docsSelectedPathCache = ""
+let docsRenderedContentCache = ""
+let docsTocCache: TOCItem[] = []
+const docsFileContentCache = new Map<string, string>()
+let docsBootstrapPromise: Promise<DocFile[]> | null = null
+
 function extractTOC(content: string): TOCItem[] {
   const headingRegex = /^(#{1,6})\s+(.+)$/gm
   const toc: TOCItem[] = []
@@ -108,19 +115,65 @@ function FileTree({
 }
 
 export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
-  const [tree, setTree] = useState<TreeNode[]>(() => initialFiles.map((f) => ({ ...f, expanded: false, children: [] })))
-  const [selectedPath, setSelectedPath] = useState<string>("")
-  const [content, setContent] = useState<string>("")
-  const [toc, setToc] = useState<TOCItem[]>([])
+  const [tree, setTree] = useState<TreeNode[]>(() => docsTreeCache ?? initialFiles.map((f) => ({ ...f, expanded: false, children: [] })))
+  const [selectedPath, setSelectedPath] = useState<string>(docsSelectedPathCache)
+  const [content, setContent] = useState<string>(docsRenderedContentCache)
+  const [toc, setToc] = useState<TOCItem[]>(docsTocCache)
   const [loading, setLoading] = useState(false)
+  const [loadingFiles, setLoadingFiles] = useState<boolean>(!docsTreeCache && initialFiles.length === 0)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  useEffect(() => {
+    if (docsTreeCache) return
+
+    const loadInitialFiles = async () => {
+      setLoadingFiles(true)
+
+      if (!docsBootstrapPromise) {
+        docsBootstrapPromise = (async () => {
+          const docFiles = await fetchDocFiles()
+          let files = docFiles
+
+          try {
+            const rootFiles = await fetchDocFiles("")
+            const readme = rootFiles.find((f) => f.name.toLowerCase() === "readme.md" && f.type === "file")
+            if (readme) {
+              files = [readme, ...docFiles]
+            }
+          } catch {
+            // Ignore root README fetch failure
+          }
+
+          return files
+        })()
+      }
+
+      const files = await docsBootstrapPromise
+      const nextTree = files.map((f) => ({ ...f, expanded: false, children: [] }))
+      docsTreeCache = nextTree
+      setTree(nextTree)
+      setLoadingFiles(false)
+    }
+
+    loadInitialFiles()
+  }, [])
 
   const handleSelect = useCallback(async (path: string) => {
     if (!path.endsWith(".md")) return
     setSelectedPath(path)
+
+    const cachedContent = docsFileContentCache.get(path)
+    if (cachedContent !== undefined) {
+      setContent(cachedContent)
+      setToc(extractTOC(cachedContent))
+      setSidebarOpen(false)
+      return
+    }
+
     setLoading(true)
     const fileContent = await fetchFileContent(path)
+    docsFileContentCache.set(path, fileContent)
     setContent(fileContent)
     setToc(extractTOC(fileContent))
     setLoading(false)
@@ -130,20 +183,28 @@ export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
 
   // Auto-select README.md as default, otherwise first markdown file
   useEffect(() => {
-    // 优先选择 README.md（根目录或 doc 目录下的）
-    const readme = initialFiles.find((f) =>
+    if (selectedPath || tree.length === 0) return
+
+    const allFiles = tree
+    const readme = allFiles.find((f) =>
       f.name.toLowerCase() === "readme.md" && f.type === "file"
     )
     if (readme) {
       handleSelect(readme.path)
     } else {
-      // 如果没有 README，选择第一个 markdown 文件
-      const firstMd = initialFiles.find((f) => f.name.endsWith(".md") && f.type === "file")
+      const firstMd = allFiles.find((f) => f.name.endsWith(".md") && f.type === "file")
       if (firstMd) {
         handleSelect(firstMd.path)
       }
     }
-  }, [initialFiles, handleSelect])
+  }, [tree, selectedPath, handleSelect])
+
+  useEffect(() => {
+    docsTreeCache = tree
+    docsSelectedPathCache = selectedPath
+    docsRenderedContentCache = content
+    docsTocCache = toc
+  }, [tree, selectedPath, content, toc])
 
   const handleToggle = async (path: string) => {
     const updateTree = async (nodes: TreeNode[]): Promise<TreeNode[]> => {
@@ -191,7 +252,12 @@ export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
         </Button>
       </div>
       <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
-        {tree.length === 0 ? (
+        {loadingFiles ? (
+          <div className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+            <div className="w-4 h-4 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+            <span>Loading documentation...</span>
+          </div>
+        ) : tree.length === 0 ? (
           <div className="p-4 text-sm text-muted-foreground">No documentation files found</div>
         ) : (
           <FileTree nodes={tree} onSelect={handleSelect} selected={selectedPath} onToggle={handleToggle} />
@@ -230,12 +296,21 @@ export function DocsContent({ initialFiles }: { initialFiles: DocFile[] }) {
         <SidebarContent />
       </aside>
 
+      {sidebarCollapsed && (
+        <div className="hidden lg:block absolute top-4 left-4 z-10">
+          <Button variant="outline" size="icon" onClick={() => setSidebarCollapsed(false)}>
+            <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto custom-scrollbar">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 lg:pt-8 pt-16">
-          {loading ? (
+          {loadingFiles || (loading && !content) ? (
             <div className="flex items-center justify-center h-64">
-              <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin mr-3" />
+              <span className="text-sm text-muted-foreground">Loading document...</span>
             </div>
           ) : content ? (
             <MarkdownRenderer content={content} currentPath={selectedPath} />

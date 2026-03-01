@@ -179,11 +179,19 @@ export function ResourcesContent({ assets }: { assets: Record<string, string> })
   const totalAssets = Object.keys(assets).length
 
   const handleDownload = (url: string, filename: string) => {
-    // 直接使用浏览器下载接口，不通过 next 路由
+    const normalizedUrl = url.replace(/^['"]+|['"]+$/g, "")
+    const isLocalDev = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    const downloadUrl = isLocalDev
+      ? normalizedUrl
+      : `/api/resources/download?url=${encodeURIComponent(normalizedUrl)}&filename=${encodeURIComponent(filename)}`
+
     const link = document.createElement("a")
-    link.href = url
+    link.href = downloadUrl
     link.download = filename
-    link.target = "_blank"
+    if (isLocalDev) {
+      link.target = "_blank"
+      link.rel = "noopener noreferrer"
+    }
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)

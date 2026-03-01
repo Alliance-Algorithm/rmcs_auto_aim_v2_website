@@ -6,7 +6,6 @@ import rehypeHighlight from "rehype-highlight"
 import rehypeRaw from "rehype-raw"
 import { cn } from "@/lib/utils"
 import "highlight.js/styles/github.css"
-import "highlight.js/styles/github-dark.css"
 
 interface MarkdownRendererProps {
   content: string
@@ -41,7 +40,7 @@ function resolveRelativePath(relativePath: string): string {
 
 export function MarkdownRenderer({ content, currentPath = "" }: MarkdownRendererProps) {
   return (
-    <article className="max-w-none prose prose-slate dark:prose-invert max-w-none">
+    <article className="max-w-none prose prose-slate dark:prose-invert prose-pre:bg-transparent prose-pre:p-0 prose-pre:border-0 prose-pre:rounded-none prose-code:before:content-none prose-code:after:content-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight, rehypeRaw]}
@@ -101,14 +100,14 @@ export function MarkdownRenderer({ content, currentPath = "" }: MarkdownRenderer
           ),
           // Code blocks
           pre: ({ node, ...props }) => (
-            <pre className="bg-muted p-4 rounded-lg overflow-x-auto border border-border mb-4" {...props} />
+            <pre className="mb-4 overflow-x-auto" {...props} />
           ),
           code: ({ node, className, ...props }) => {
             const isInline = !className
             return isInline ? (
               <code className="bg-muted px-1.5 py-0.5 rounded text-sm font-mono markdown-code" {...props} />
             ) : (
-              <code className={cn("text-sm font-mono", className)} {...props} />
+              <code className={cn("block rounded-lg border border-border bg-[var(--code-block-bg)] p-4 text-sm font-mono", className)} {...props} />
             )
           },
           // Blockquotes

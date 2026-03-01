@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { FileText, GitBranch, Users, FolderOpen, ArrowRight, Github } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 import { fetchRepoInfo } from "@/lib/github"
 
 const features = [
@@ -34,10 +35,29 @@ const features = [
 
 export function HomeContent() {
   const [repoInfo, setRepoInfo] = useState<{ stargazers_count: number; forks_count: number } | null>(null)
+  const pathname = usePathname()
 
-  useEffect(() => {
+  const refreshRepoInfo = useCallback(() => {
+    setRepoInfo(null)
     fetchRepoInfo().then(setRepoInfo)
   }, [])
+
+  useEffect(() => {
+    if (pathname === "/") {
+      refreshRepoInfo()
+    }
+  }, [pathname, refreshRepoInfo])
+
+  useEffect(() => {
+    const onPageShow = () => {
+      if (pathname === "/") {
+        refreshRepoInfo()
+      }
+    }
+
+    window.addEventListener("pageshow", onPageShow)
+    return () => window.removeEventListener("pageshow", onPageShow)
+  }, [pathname, refreshRepoInfo])
 
   return (
     <main className="relative">
