@@ -1,7 +1,10 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Download, ImageIcon, Video, File, Music, FileCode, FileText, Archive, Container } from "lucide-react"
+import { fetchAssets } from "@/lib/github"
+
+let resourcesCache: Record<string, string> | null = null
 
 interface ResourceGroup {
   label: string
@@ -175,8 +178,23 @@ function categorizeAssets(assets: Record<string, string>): ResourceGroup[] {
 }
 
 export function ResourcesContent({ assets }: { assets: Record<string, string> }) {
-  const groups = useMemo(() => categorizeAssets(assets), [assets])
-  const totalAssets = Object.keys(assets).length
+  const [assetMap, setAssetMap] = useState<Record<string, string>>(resourcesCache ?? assets)
+  const [loading, setLoading] = useState<boolean>(!resourcesCache && Object.keys(assets).length === 0)
+
+  useEffect(() => {
+    if (resourcesCache) return
+
+    setLoading(true)
+    fetchAssets()
+      .then((nextAssets) => {
+        resourcesCache = nextAssets
+        setAssetMap(nextAssets)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const groups = useMemo(() => categorizeAssets(assetMap), [assetMap])
+  const totalAssets = Object.keys(assetMap).length
 
   const handleDownload = (url: string, filename: string) => {
     const normalizedUrl = url.replace(/^['"]+|['"]+$/g, "")
@@ -223,7 +241,12 @@ export function ResourcesContent({ assets }: { assets: Record<string, string> })
       </div>
 
       {/* Resource Groups */}
-      {totalAssets === 0 ? (
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <div className="w-6 h-6 border-2 border-foreground border-t-transparent rounded-full animate-spin mr-3" />
+          <span>Loading resources...</span>
+        </div>
+      ) : totalAssets === 0 ? (
         <div className="text-center py-20 text-muted-foreground">
           <File className="w-12 h-12 mx-auto mb-4 opacity-50" />
           <p>No assets found in test/asset.yml</p>
